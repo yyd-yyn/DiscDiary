@@ -85,7 +85,6 @@ container.addEventListener("click", (e) => {
 
   // unique IDs/names
   setupStarRatingGroup(savedEntryClone); // ChatGPT
-  savedEntry.dataset.id = entry._id;
 
   // fill in
   savedEntryClone.querySelector(".saved_title").value = newTitle;
@@ -324,6 +323,7 @@ container.addEventListener("click", (e) => {
   initDetailEntries(container); // ChatGPT
 
   updateStatistics();
+
   saveEntries().catch(console.error);
 });
 
