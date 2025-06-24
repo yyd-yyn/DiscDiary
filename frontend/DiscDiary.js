@@ -13,7 +13,8 @@ document.getElementById("add_entry_button").addEventListener("click", () => {
 });
 
 // detail update
-function initDetailEntries(scope = document) { // ChatGPT
+function initDetailEntries(scope = document) {
+  // ChatGPT
   scope.querySelectorAll(".new_detail_entry").forEach((details) => {
     const radios = details.querySelectorAll("input[type='radio']");
     const summary = details.querySelector("summary");
@@ -53,10 +54,7 @@ function selectIcon(src) {
 
 // save entry
 container.addEventListener("click", (e) => {
-  if (
-    !e.target.classList.contains("save_button") 
-  )
-    return;
+  if (!e.target.classList.contains("save_button")) return;
 
   const newEntry = e.target.closest(".new_entry");
 
@@ -67,21 +65,27 @@ container.addEventListener("click", (e) => {
   const newDate = newEntry.querySelector(".new_date")?.value || "";
   const newText = newEntry.querySelector(".new_textarea")?.value || "";
 
-  const genre = newEntry.querySelector("input[name='genre']:checked")?.value || "";
-  const type = newEntry.querySelector("input[name='type']:checked")?.value || "";
-  const format = newEntry.querySelector("input[name='format']:checked")?.value || "";
+  const genre =
+    newEntry.querySelector("input[name='genre']:checked")?.value || "";
+  const type =
+    newEntry.querySelector("input[name='type']:checked")?.value || "";
+  const format =
+    newEntry.querySelector("input[name='format']:checked")?.value || "";
 
   const newIconSrc = newEntry.querySelector(".new_current_icon")?.src || "";
 
-  const checkedStar = newEntry.querySelector( ".new_star_rating input[type='radio']:checked");
+  const checkedStar = newEntry.querySelector(
+    ".new_star_rating input[type='radio']:checked"
+  );
   const rating = checkedStar ? parseInt(checkedStar.value) : 0; // ChatGPT
 
-  // clone 
+  // clone
   const template = document.getElementById("saved_entry_template");
   const savedEntryClone = template.content.cloneNode(true); // ChatGPT
 
-  // unique IDs/names to stars
+  // unique IDs/names
   setupStarRatingGroup(savedEntryClone); // ChatGPT
+  savedEntry.dataset.id = entry._id;
 
   // fill in
   savedEntryClone.querySelector(".saved_title").value = newTitle;
@@ -90,9 +94,15 @@ container.addEventListener("click", (e) => {
   savedEntryClone.querySelector(".saved_date").value = newDate;
   savedEntryClone.querySelector(".saved_textarea").value = newText;
 
-  const genreSummary = savedEntryClone.querySelector(".saved_detail_entry:nth-child(1) summary"); // ChatGPT
-  const typeSummary = savedEntryClone.querySelector(".saved_detail_entry:nth-child(2) summary");
-  const formatSummary = savedEntryClone.querySelector(".saved_detail_entry:nth-child(3) summary");
+  const genreSummary = savedEntryClone.querySelector(
+    ".saved_detail_entry:nth-child(1) summary"
+  ); // ChatGPT
+  const typeSummary = savedEntryClone.querySelector(
+    ".saved_detail_entry:nth-child(2) summary"
+  );
+  const formatSummary = savedEntryClone.querySelector(
+    ".saved_detail_entry:nth-child(3) summary"
+  );
 
   genreSummary.textContent = genre || "Genre";
   typeSummary.textContent = type || "Type";
@@ -103,25 +113,29 @@ container.addEventListener("click", (e) => {
     iconImg.src = newIconSrc;
   }
 
-  const savedStarInputs = savedEntryClone.querySelectorAll(".saved_star_rating input[type='radio']");
-  savedStarInputs.forEach((input) => { // ChatGPT
+  const savedStarInputs = savedEntryClone.querySelectorAll(
+    ".saved_star_rating input[type='radio']"
+  );
+  savedStarInputs.forEach((input) => {
+    // ChatGPT
     if (parseInt(input.value) === rating) {
       input.checked = true;
     }
   });
 
-  newEntry.remove(); 
+  newEntry.remove();
 
   // add to container
   const entriesContainer = document.getElementById("entries_container");
   entriesContainer.appendChild(savedEntryClone); // ChatGPT
 
   sortEntriesByDate(entriesContainer);
- saveEntries().catch(console.error);
+  saveEntries().catch(console.error);
 });
 
 // sort function
-function sortEntriesByDate(container) { // ChatGPT
+function sortEntriesByDate(container) {
+  // ChatGPT
   const entries = Array.from(container.querySelectorAll(".saved_entry"));
   entries.sort((a, b) => {
     const dateA = new Date(
@@ -136,8 +150,9 @@ function sortEntriesByDate(container) { // ChatGPT
   entries.forEach((entry) => container.appendChild(entry));
 }
 
-// unique star id/name 
-function setupStarRatingGroup(container) { // ChatGPT
+// unique star id/name
+function setupStarRatingGroup(container) {
+  // ChatGPT
   const starContainer = container.querySelector(".new_star_rating");
   if (!starContainer) return;
 
@@ -167,7 +182,7 @@ function updateStatistics() {
 
   // 1. total entries
   document.getElementById("total_entries").textContent = entries.length;
-  
+
   // 2. year range
   let years = entries // ChatGPT
     .map((entry) => parseInt(entry.querySelector(".saved_year").value))
@@ -178,7 +193,9 @@ function updateStatistics() {
   } else {
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
-    document.getElementById("year_range").textContent = `${minYear} - ${maxYear}`;
+    document.getElementById(
+      "year_range"
+    ).textContent = `${minYear} - ${maxYear}`;
   }
 
   // 3. top artist // ChatGPT
@@ -241,11 +258,16 @@ container.addEventListener("click", (e) => {
   const clone = template.content.cloneNode(true);
 
   // copy input
-  clone.querySelector(".new_title").value = savedEntry.querySelector(".saved_title").value;
-  clone.querySelector(".new_artist").value = savedEntry.querySelector(".saved_artist").value;
-  clone.querySelector(".new_year").value = savedEntry.querySelector(".saved_year").value;
-  clone.querySelector(".new_date").value = savedEntry.querySelector(".saved_date").value;
-  clone.querySelector(".new_textarea").value = savedEntry.querySelector(".saved_textarea").value;
+  clone.querySelector(".new_title").value =
+    savedEntry.querySelector(".saved_title").value;
+  clone.querySelector(".new_artist").value =
+    savedEntry.querySelector(".saved_artist").value;
+  clone.querySelector(".new_year").value =
+    savedEntry.querySelector(".saved_year").value;
+  clone.querySelector(".new_date").value =
+    savedEntry.querySelector(".saved_date").value;
+  clone.querySelector(".new_textarea").value =
+    savedEntry.querySelector(".saved_textarea").value;
 
   const savedIcon = savedEntry.querySelector(".current_icon")?.src;
   const newIcon = clone.querySelector(".new_current_icon");
@@ -253,8 +275,12 @@ container.addEventListener("click", (e) => {
     newIcon.src = savedIcon;
   }
 
-  const savedChecked = savedEntry.querySelector(".saved_star_rating input[type='radio']:checked");
-  const newStars = clone.querySelectorAll(".new_star_rating input[type='radio']");
+  const savedChecked = savedEntry.querySelector(
+    ".saved_star_rating input[type='radio']:checked"
+  );
+  const newStars = clone.querySelectorAll(
+    ".new_star_rating input[type='radio']"
+  );
   if (savedChecked) {
     newStars.forEach((star) => {
       if (star.value === savedChecked.value) {
@@ -268,11 +294,18 @@ container.addEventListener("click", (e) => {
     const summary = detailsGroup.querySelector("summary");
     const type = detailsGroup.dataset.type;
 
-    const savedDetailsGroup = savedEntry.querySelectorAll(".saved_detail_entry")[index];
-    const savedText = savedDetailsGroup?.querySelector("summary")?.textContent.trim();
+    const savedDetailsGroup = savedEntry.querySelectorAll(
+      ".saved_detail_entry"
+    )[index];
+    const savedText = savedDetailsGroup
+      ?.querySelector("summary")
+      ?.textContent.trim();
 
-    if (savedText) { // ChatGPT
-     const matchingRadio = [...detailsGroup.querySelectorAll("label")].find((label) => label.textContent.trim() === savedText);
+    if (savedText) {
+      // ChatGPT
+      const matchingRadio = [...detailsGroup.querySelectorAll("label")].find(
+        (label) => label.textContent.trim() === savedText
+      );
 
       if (matchingRadio) {
         const radio = matchingRadio.querySelector("input");
@@ -291,7 +324,7 @@ container.addEventListener("click", (e) => {
   initDetailEntries(container); // ChatGPT
 
   updateStatistics();
- saveEntries().catch(console.error);
+  saveEntries().catch(console.error);
 });
 
 // delete entry
@@ -299,10 +332,19 @@ container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
   const entry = e.target.closest(".new_entry, .saved_entry");
-  if (entry) entry.remove();
+  if (!entry) return;
 
+  const id = entry.dataset.id;
+
+  // direkt aus dem DOM schmeißen
+  entry.remove();
   updateStatistics();
-saveEntries().catch(console.error);
+
+  if (id) {
+    deleteEntryFromDB(id).catch(console.error);
+  } else {
+    saveEntries().catch(console.error);
+  }
 });
 
 // scroll to top
@@ -322,11 +364,20 @@ async function saveEntries() {
     year: entry.querySelector(".saved_year").value,
     date: entry.querySelector(".saved_date").value,
     text: entry.querySelector(".saved_textarea").value,
-    genre: entry.querySelector(".saved_detail_entry:nth-child(1) summary").textContent.trim(),
-    type: entry.querySelector(".saved_detail_entry:nth-child(2) summary").textContent.trim(),
-    format: entry.querySelector(".saved_detail_entry:nth-child(3) summary").textContent.trim(),
+    genre: entry
+      .querySelector(".saved_detail_entry:nth-child(1) summary")
+      .textContent.trim(),
+    type: entry
+      .querySelector(".saved_detail_entry:nth-child(2) summary")
+      .textContent.trim(),
+    format: entry
+      .querySelector(".saved_detail_entry:nth-child(3) summary")
+      .textContent.trim(),
     icon: entry.querySelector(".current_icon")?.src || "",
-    rating: parseInt(entry.querySelector(".saved_star_rating input[type='radio']:checked")?.value || 0),
+    rating: parseInt(
+      entry.querySelector(".saved_star_rating input[type='radio']:checked")
+        ?.value || 0
+    ),
   }));
 
   localStorage.setItem("discdiaryentries", JSON.stringify(data));
@@ -361,7 +412,7 @@ async function loadEntries() {
   const template = document.getElementById("saved_entry_template");
   const container = document.getElementById("entries_container");
 
-  container.innerHTML = ""; 
+  container.innerHTML = "";
 
   data.forEach((entryData) => {
     const clone = template.content.cloneNode(true);
@@ -372,14 +423,22 @@ async function loadEntries() {
     clone.querySelector(".saved_date").value = entryData.date;
     clone.querySelector(".saved_textarea").value = entryData.text;
 
-    clone.querySelector(".saved_detail_entry:nth-child(1) summary").textContent = entryData.genre || "Genre";
-    clone.querySelector(".saved_detail_entry:nth-child(2) summary").textContent = entryData.type || "Type";
-    clone.querySelector(".saved_detail_entry:nth-child(3) summary").textContent = entryData.format || "Format";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(1) summary"
+    ).textContent = entryData.genre || "Genre";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(2) summary"
+    ).textContent = entryData.type || "Type";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(3) summary"
+    ).textContent = entryData.format || "Format";
 
     const iconImg = clone.querySelector(".current_icon");
     if (iconImg && entryData.icon) iconImg.src = entryData.icon;
 
-    const stars = clone.querySelectorAll(".saved_star_rating input[type='radio']");
+    const stars = clone.querySelectorAll(
+      ".saved_star_rating input[type='radio']"
+    );
     stars.forEach((input) => {
       if (parseInt(input.value) === entryData.rating) input.checked = true;
     });
@@ -391,6 +450,27 @@ async function loadEntries() {
 
   sortEntriesByDate(container);
   updateStatistics();
+}
+
+// 4 server.js
+async function deleteEntryFromDB(id) {
+  const response = await fetch(`/api/entries/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete entry from server");
+  }
+}
+
+async function updateEntryInDB(id, updatedEntry) {
+  const response = await fetch(`/api/entries/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updatedEntry),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update entry on server");
+  }
 }
 
 loadEntries().catch(console.error);
