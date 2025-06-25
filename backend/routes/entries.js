@@ -4,17 +4,6 @@ const { ObjectId } = require('mongodb');
 module.exports = function(db) {
   const router = express.Router();
 
-  // GET all entries
-  router.get('/', async (req, res) => {
-    try {
-      const entries = await db.collection('entries').find().toArray();
-      res.json(entries);
-    } catch (err) {
-      console.error("❌ Fetch entries error:", err);
-      res.status(500).json({ error: 'Error fetching entries' });
-    }
-  });
-
   // GET entry by ID
   router.get('/:id', async (req, res) => {
     const { id } = req.params;

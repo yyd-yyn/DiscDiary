@@ -1,3 +1,146 @@
+//API
+async function saveEntry(entryData) {
+  try {
+    const res = await fetch('/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entryData),
+    });
+    if (!res.ok) throw new Error('Failed to save entry');
+    const data = await res.json();
+    console.log(data.message); 
+    return true;
+  } catch (err) {
+    console.error('Save entry error:', err);
+    return false;
+  }
+}
+async function fetchEntryById(id) {
+  try {
+    const res = await fetch(`/entries/${id}`);
+    if (res.status === 404) {
+      console.warn('Entry not found');
+      return null;
+    }
+    if (!res.ok) throw new Error('Fetch error');
+    return await res.json();
+  } catch (err) {
+    console.error('Fetch entry error:', err);
+    return null;
+  }
+}
+async function deleteEntryFromDB(id) {
+  const response = await fetch(`/entries/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete entry from server");
+  }
+}
+
+async function updateEntryInDB(id, updatedEntry) {
+  const response = await fetch(`/entries/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updatedEntry),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update entry on server");
+  }
+}
+async function saveEntries() {
+  const entries = Array.from(document.querySelectorAll(".saved_entry"));
+  const data = entries.map((entry) => ({
+    title: entry.querySelector(".saved_title").value,
+    artist: entry.querySelector(".saved_artist").value,
+    year: entry.querySelector(".saved_year").value,
+    date: entry.querySelector(".saved_date").value,
+    text: entry.querySelector(".saved_textarea").value,
+    genre: entry
+      .querySelector(".saved_detail_entry:nth-child(1) summary")
+      .textContent.trim(),
+    type: entry
+      .querySelector(".saved_detail_entry:nth-child(2) summary")
+      .textContent.trim(),
+    format: entry
+      .querySelector(".saved_detail_entry:nth-child(3) summary")
+      .textContent.trim(),
+    icon: entry.querySelector(".current_icon")?.src || "",
+    rating: parseInt(
+      entry.querySelector(".saved_star_rating input[type='radio']:checked")
+        ?.value || 0
+    ),
+  }));
+
+  localStorage.setItem("discdiaryentries", JSON.stringify(data));
+
+  try {
+    const res = await fetch("/api/entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Server save failed");
+  } catch (e) {
+    console.warn("Failed to save to server, saved locally only.", e);
+  }
+}
+async function loadEntries() {
+  let data = [];
+  try {
+    const res = await fetch("/api/entries");
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      throw new Error("Server responded not OK");
+    }
+  } catch {
+    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
+  }
+
+  const template = document.getElementById("saved_entry_template");
+  const container = document.getElementById("entries_container");
+
+  container.innerHTML = "";
+
+  data.forEach((entryData) => {
+    const clone = template.content.cloneNode(true);
+
+    clone.querySelector(".saved_title").value = entryData.title;
+    clone.querySelector(".saved_artist").value = entryData.artist;
+    clone.querySelector(".saved_year").value = entryData.year;
+    clone.querySelector(".saved_date").value = entryData.date;
+    clone.querySelector(".saved_textarea").value = entryData.text;
+
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(1) summary"
+    ).textContent = entryData.genre || "Genre";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(2) summary"
+    ).textContent = entryData.type || "Type";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(3) summary"
+    ).textContent = entryData.format || "Format";
+
+    const iconImg = clone.querySelector(".current_icon");
+    if (iconImg && entryData.icon) iconImg.src = entryData.icon;
+
+    const stars = clone.querySelectorAll(
+      ".saved_star_rating input[type='radio']"
+    );
+    stars.forEach((input) => {
+      if (parseInt(input.value) === entryData.rating) input.checked = true;
+    });
+
+    setupStarRatingGroup(clone);
+
+    container.appendChild(clone);
+  });
+
+  sortEntriesByDate(container);
+  updateStatistics();
+}
+
 // add entry
 const container = document.getElementById("entries_container");
 
@@ -343,122 +486,6 @@ document.getElementById("top_button").addEventListener("click", () => {
   });
 });
 
-// storage (save)
-async function saveEntries() {
-  const entries = Array.from(document.querySelectorAll(".saved_entry"));
-  const data = entries.map((entry) => ({
-    title: entry.querySelector(".saved_title").value,
-    artist: entry.querySelector(".saved_artist").value,
-    year: entry.querySelector(".saved_year").value,
-    date: entry.querySelector(".saved_date").value,
-    text: entry.querySelector(".saved_textarea").value,
-    genre: entry
-      .querySelector(".saved_detail_entry:nth-child(1) summary")
-      .textContent.trim(),
-    type: entry
-      .querySelector(".saved_detail_entry:nth-child(2) summary")
-      .textContent.trim(),
-    format: entry
-      .querySelector(".saved_detail_entry:nth-child(3) summary")
-      .textContent.trim(),
-    icon: entry.querySelector(".current_icon")?.src || "",
-    rating: parseInt(
-      entry.querySelector(".saved_star_rating input[type='radio']:checked")
-        ?.value || 0
-    ),
-  }));
-
-  localStorage.setItem("discdiaryentries", JSON.stringify(data));
-
-  try {
-    const res = await fetch("/api/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Server save failed");
-  } catch (e) {
-    console.warn("Failed to save to server, saved locally only.", e);
-  }
-}
-
-// storage (load)
-async function loadEntries() {
-  let data = [];
-  try {
-    const res = await fetch("/api/entries");
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      throw new Error("Server responded not OK");
-    }
-  } catch {
-    // fallback localStorage (ChatGPT)
-    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
-  }
-
-  const template = document.getElementById("saved_entry_template");
-  const container = document.getElementById("entries_container");
-
-  container.innerHTML = "";
-
-  data.forEach((entryData) => {
-    const clone = template.content.cloneNode(true);
-
-    clone.querySelector(".saved_title").value = entryData.title;
-    clone.querySelector(".saved_artist").value = entryData.artist;
-    clone.querySelector(".saved_year").value = entryData.year;
-    clone.querySelector(".saved_date").value = entryData.date;
-    clone.querySelector(".saved_textarea").value = entryData.text;
-
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(1) summary"
-    ).textContent = entryData.genre || "Genre";
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(2) summary"
-    ).textContent = entryData.type || "Type";
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(3) summary"
-    ).textContent = entryData.format || "Format";
-
-    const iconImg = clone.querySelector(".current_icon");
-    if (iconImg && entryData.icon) iconImg.src = entryData.icon;
-
-    const stars = clone.querySelectorAll(
-      ".saved_star_rating input[type='radio']"
-    );
-    stars.forEach((input) => {
-      if (parseInt(input.value) === entryData.rating) input.checked = true;
-    });
-
-    setupStarRatingGroup(clone);
-
-    container.appendChild(clone);
-  });
-
-  sortEntriesByDate(container);
-  updateStatistics();
-}
-
-// 4 server.js
-async function deleteEntryFromDB(id) {
-  const response = await fetch(`/api/entries/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete entry from server");
-  }
-}
-
-async function updateEntryInDB(id, updatedEntry) {
-  const response = await fetch(`/api/entries/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updatedEntry),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update entry on server");
-  }
-}
-
-loadEntries().catch(console.error);
+window.addEventListener('DOMContentLoaded', () => {
+  loadEntries().catch(console.error);
+});
