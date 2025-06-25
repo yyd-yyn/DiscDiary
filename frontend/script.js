@@ -309,35 +309,42 @@ container.addEventListener("click", (e) => {
   }
 });
 
+// edit entry
 container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("edit_button")) return;
 
   const savedEntry = e.target.closest(".saved_entry");
   const template = document.getElementById("new_entry_template");
   const clone = template.content.cloneNode(true);
+  const newEntry = clone.querySelector(".new_entry");
 
-  // copy input
-  clone.querySelector(".new_title").value =
+  // preserve the original ID
+  newEntry.dataset.id = savedEntry.dataset.id;
+
+  // copy input fields
+  newEntry.querySelector(".new_title").value =
     savedEntry.querySelector(".saved_title").value;
-  clone.querySelector(".new_artist").value =
+  newEntry.querySelector(".new_artist").value =
     savedEntry.querySelector(".saved_artist").value;
-  clone.querySelector(".new_year").value =
+  newEntry.querySelector(".new_year").value =
     savedEntry.querySelector(".saved_year").value;
-  clone.querySelector(".new_date").value =
+  newEntry.querySelector(".new_date").value =
     savedEntry.querySelector(".saved_date").value;
-  clone.querySelector(".new_textarea").value =
+  newEntry.querySelector(".new_textarea").value =
     savedEntry.querySelector(".saved_textarea").value;
 
+  // copy icon
   const savedIcon = savedEntry.querySelector(".current_icon")?.src;
-  const newIcon = clone.querySelector(".new_current_icon");
+  const newIcon = newEntry.querySelector(".new_current_icon");
   if (savedIcon && newIcon) {
     newIcon.src = savedIcon;
   }
 
+  // copy star rating
   const savedChecked = savedEntry.querySelector(
     ".saved_star_rating input[type='radio']:checked"
   );
-  const newStars = clone.querySelectorAll(
+  const newStars = newEntry.querySelectorAll(
     ".new_star_rating input[type='radio']"
   );
   if (savedChecked) {
@@ -348,7 +355,8 @@ container.addEventListener("click", (e) => {
     });
   }
 
-  const newDetails = clone.querySelectorAll(".new_detail_entry");
+  // copy genre/type/format detail summaries
+  const newDetails = newEntry.querySelectorAll(".new_detail_entry");
   newDetails.forEach((detailsGroup, index) => {
     const summary = detailsGroup.querySelector("summary");
     const type = detailsGroup.dataset.type;
@@ -376,14 +384,13 @@ container.addEventListener("click", (e) => {
     }
   });
 
-  // preserve the original ID in case we need to update the DB on re-save
-  clone.querySelector(".new_entry").dataset.id = savedEntry.dataset.id;
-
   savedEntry.replaceWith(clone);
+
   initDetailEntries(container);
   updateStatistics();
 });
 
+// delete entry
 container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
