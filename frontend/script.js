@@ -17,7 +17,7 @@ async function saveEntry(entry) {
 
 async function fetchEntryById(id) {
   try {
-    const res = await fetch(`/entries/${id}`);
+    const res = await fetch(`/api/entries/${id}`);
     if (res.status === 404) {
       console.warn('Entry not found');
       return null;
@@ -30,7 +30,7 @@ async function fetchEntryById(id) {
   }
 }
 async function deleteEntryFromDB(id) {
-  const response = await fetch(`/entries/${id}`, {
+  const response = await fetch(`/api/entries/${id}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -39,7 +39,7 @@ async function deleteEntryFromDB(id) {
 }
 
 async function updateEntryInDB(id, updatedEntry) {
-  const response = await fetch(`/entries/${id}`, {
+  const response = await fetch(`/api/entries/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updatedEntry),
@@ -417,6 +417,3 @@ document.getElementById("top_button").addEventListener("click", () => {
   });
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadEntries().catch(console.error);
-});

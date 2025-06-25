@@ -4,7 +4,7 @@ const { ObjectId } = require('mongodb');
 module.exports = function(db) {
   const router = express.Router();
 
-  // GET entry by ID
+  // GET fetch entry
   router.get('/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -17,19 +17,19 @@ module.exports = function(db) {
     }
   });
 
-  // POST new entry
+  // POST add entry
   router.post('/', async (req, res) => {
     const entry = req.body;
     try {
       await db.collection('entries').insertOne(entry);
-      res.status(201).json({ message: '🎉 Saved!' });
+      res.status(201).json({ message: 'Saved' });
     } catch (err) {
       console.error("❌ Save entry error:", err);
       res.status(500).json({ error: 'Error saving entry' });
     }
   });
 
-  // PUT update entry by ID
+  // PUT update entry 
   router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updatedEntry = req.body;
@@ -50,7 +50,7 @@ module.exports = function(db) {
     }
   });
 
-  // DELETE entry by ID
+  // DELETE remove entry
   router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
