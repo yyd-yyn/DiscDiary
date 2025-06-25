@@ -1,20 +1,20 @@
-require('dotenv').config();
-
 const express = require('express');
 const path = require('path');
-const { MongoClient } = require('mongodb'); 
-const bodyParser = require('body-parser'); 
-const { ObjectId } = require("mongodb");
+const { MongoClient, ObjectId } = require('mongodb');
+const bodyParser = require('body-parser');
+
 const app = express();
 const PORT = 3000;
 
-app.use(bodyParser.json()); 
+// Middleware
+app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
+
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/DiscDiary.html'));
 });
 
-// MongoDB
+// MongoDB Setup
 const mongoUrl = 'mongodb://127.0.0.1:27017';
 const client = new MongoClient(mongoUrl);
 
@@ -26,10 +26,10 @@ async function connectDB() {
     db = client.db('DiscDiary');
     console.log("✅ MongoDB verbunden");
 
+    // Start server after DB is ready
     app.listen(PORT, () => {
       console.log(`🚀 Server läuft auf http://localhost:${PORT}`);
     });
-
   } catch (err) {
     console.error("❌ Fehler beim Verbinden zur MongoDB:", err);
   }
@@ -51,12 +51,9 @@ app.get('/api/entries', async (req, res) => {
 // GET single entry by ID
 app.get('/api/entries/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
     const entry = await db.collection('entries').findOne({ _id: new ObjectId(id) });
-    if (!entry) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
+    if (!entry) return res.status(404).json({ error: 'Entry not found' });
     res.json(entry);
   } catch (err) {
     console.error('❌ Fehler beim Abrufen eines Eintrags:', err);
@@ -76,11 +73,10 @@ app.post('/api/entries', async (req, res) => {
   }
 });
 
-// PUT update entry by id
+// PUT update entry by ID
 app.put('/api/entries/:id', async (req, res) => {
   const { id } = req.params;
   const updatedEntry = req.body;
-
   delete updatedEntry._id;
 
   try {
@@ -92,13 +88,13 @@ app.put('/api/entries/:id', async (req, res) => {
       return res.status(404).json({ error: 'Entry not found' });
     }
     res.json({ message: 'Entry updated' });
-  } catch (error) {
-    console.error('Update error:', error);
+  } catch (err) {
+    console.error('Update error:', err);
     res.status(500).json({ error: 'Server error during update' });
   }
 });
 
-// DELETE entry by id
+// DELETE entry by ID
 app.delete('/api/entries/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -107,8 +103,8 @@ app.delete('/api/entries/:id', async (req, res) => {
       return res.status(404).json({ error: 'Entry not found' });
     }
     res.json({ message: 'Entry deleted' });
-  } catch (error) {
-    console.error('Delete error:', error);
+  } catch (err) {
+    console.error('Delete error:', err);
     res.status(500).json({ error: 'Server error during delete' });
   }
 });
