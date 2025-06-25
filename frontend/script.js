@@ -65,58 +65,47 @@ container.addEventListener("click", (e) => {
   const newDate = newEntry.querySelector(".new_date")?.value || "";
   const newText = newEntry.querySelector(".new_textarea")?.value || "";
 
-  const genre =
-    newEntry.querySelector("input[name='genre']:checked")?.value || "";
-  const type =
-    newEntry.querySelector("input[name='type']:checked")?.value || "";
-  const format =
-    newEntry.querySelector("input[name='format']:checked")?.value || "";
+  const genre = newEntry.querySelector("input[name='genre']:checked")?.value || "";
+  const type = newEntry.querySelector("input[name='type']:checked")?.value || "";
+  const format = newEntry.querySelector("input[name='format']:checked")?.value || "";
 
   const newIconSrc = newEntry.querySelector(".new_current_icon")?.src || "";
 
-  const checkedStar = newEntry.querySelector(
-    ".new_star_rating input[type='radio']:checked"
-  );
-  const rating = checkedStar ? parseInt(checkedStar.value) : 0; // ChatGPT
+  const checkedStar = newEntry.querySelector(".new_star_rating input[type='radio']:checked");
+  const rating = checkedStar ? parseInt(checkedStar.value) : 0;
 
   // clone
   const template = document.getElementById("saved_entry_template");
-  const savedEntryClone = template.content.cloneNode(true); // ChatGPT
+  const savedEntryClone = template.content.cloneNode(true);
+  const savedEntry = savedEntryClone.querySelector(".saved_entry");
 
-  // unique IDs/names
-  setupStarRatingGroup(savedEntryClone); // ChatGPT
+  // give ID
+  savedEntry.dataset.id =
+    newEntry.dataset.id || `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  // fill in
-  savedEntryClone.querySelector(".saved_title").value = newTitle;
-  savedEntryClone.querySelector(".saved_artist").value = newArtist;
-  savedEntryClone.querySelector(".saved_year").value = newYear;
-  savedEntryClone.querySelector(".saved_date").value = newDate;
-  savedEntryClone.querySelector(".saved_textarea").value = newText;
+  // unique star rating
+  setupStarRatingGroup(savedEntryClone);
 
-  const genreSummary = savedEntryClone.querySelector(
-    ".saved_detail_entry:nth-child(1) summary"
-  ); // ChatGPT
-  const typeSummary = savedEntryClone.querySelector(
-    ".saved_detail_entry:nth-child(2) summary"
-  );
-  const formatSummary = savedEntryClone.querySelector(
-    ".saved_detail_entry:nth-child(3) summary"
-  );
+  // fill in content
+  savedEntry.querySelector(".saved_title").value = newTitle;
+  savedEntry.querySelector(".saved_artist").value = newArtist;
+  savedEntry.querySelector(".saved_year").value = newYear;
+  savedEntry.querySelector(".saved_date").value = newDate;
+  savedEntry.querySelector(".saved_textarea").value = newText;
+
+  const genreSummary = savedEntry.querySelector(".saved_detail_entry:nth-child(1) summary");
+  const typeSummary = savedEntry.querySelector(".saved_detail_entry:nth-child(2) summary");
+  const formatSummary = savedEntry.querySelector(".saved_detail_entry:nth-child(3) summary");
 
   genreSummary.textContent = genre || "Genre";
   typeSummary.textContent = type || "Type";
   formatSummary.textContent = format || "Format";
 
-  const iconImg = savedEntryClone.querySelector(".current_icon");
-  if (iconImg && newIconSrc) {
-    iconImg.src = newIconSrc;
-  }
+  const iconImg = savedEntry.querySelector(".current_icon");
+  if (iconImg && newIconSrc) iconImg.src = newIconSrc;
 
-  const savedStarInputs = savedEntryClone.querySelectorAll(
-    ".saved_star_rating input[type='radio']"
-  );
+  const savedStarInputs = savedEntry.querySelectorAll(".saved_star_rating input[type='radio']");
   savedStarInputs.forEach((input) => {
-    // ChatGPT
     if (parseInt(input.value) === rating) {
       input.checked = true;
     }
@@ -124,9 +113,8 @@ container.addEventListener("click", (e) => {
 
   newEntry.remove();
 
-  // add to container
   const entriesContainer = document.getElementById("entries_container");
-  entriesContainer.appendChild(savedEntryClone); // ChatGPT
+  entriesContainer.appendChild(savedEntry);
 
   sortEntriesByDate(entriesContainer);
   saveEntries().catch(console.error);
