@@ -26,7 +26,6 @@ async function connectDB() {
     db = client.db('DiscDiary');
     console.log("✅ MongoDB connected");
 
-    // Pass the db instance to routes
     const entriesRoutes = require('./routes/entries')(db);
     app.use('/api/entries', entriesRoutes);
 

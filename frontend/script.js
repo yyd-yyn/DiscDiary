@@ -1,3 +1,4 @@
+const container = document.getElementById("entries_container");
 //API
 async function saveEntry(entryData) {
   try {
@@ -48,102 +49,8 @@ async function updateEntryInDB(id, updatedEntry) {
     throw new Error("Failed to update entry on server");
   }
 }
-async function saveEntries() {
-  const entries = Array.from(document.querySelectorAll(".saved_entry"));
-  const data = entries.map((entry) => ({
-    title: entry.querySelector(".saved_title").value,
-    artist: entry.querySelector(".saved_artist").value,
-    year: entry.querySelector(".saved_year").value,
-    date: entry.querySelector(".saved_date").value,
-    text: entry.querySelector(".saved_textarea").value,
-    genre: entry
-      .querySelector(".saved_detail_entry:nth-child(1) summary")
-      .textContent.trim(),
-    type: entry
-      .querySelector(".saved_detail_entry:nth-child(2) summary")
-      .textContent.trim(),
-    format: entry
-      .querySelector(".saved_detail_entry:nth-child(3) summary")
-      .textContent.trim(),
-    icon: entry.querySelector(".current_icon")?.src || "",
-    rating: parseInt(
-      entry.querySelector(".saved_star_rating input[type='radio']:checked")
-        ?.value || 0
-    ),
-  }));
-
-  localStorage.setItem("discdiaryentries", JSON.stringify(data));
-
-  try {
-    const res = await fetch("/api/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Server save failed");
-  } catch (e) {
-    console.warn("Failed to save to server, saved locally only.", e);
-  }
-}
-async function loadEntries() {
-  let data = [];
-  try {
-    const res = await fetch("/api/entries");
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      throw new Error("Server responded not OK");
-    }
-  } catch {
-    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
-  }
-
-  const template = document.getElementById("saved_entry_template");
-  const container = document.getElementById("entries_container");
-
-  container.innerHTML = "";
-
-  data.forEach((entryData) => {
-    const clone = template.content.cloneNode(true);
-
-    clone.querySelector(".saved_title").value = entryData.title;
-    clone.querySelector(".saved_artist").value = entryData.artist;
-    clone.querySelector(".saved_year").value = entryData.year;
-    clone.querySelector(".saved_date").value = entryData.date;
-    clone.querySelector(".saved_textarea").value = entryData.text;
-
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(1) summary"
-    ).textContent = entryData.genre || "Genre";
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(2) summary"
-    ).textContent = entryData.type || "Type";
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(3) summary"
-    ).textContent = entryData.format || "Format";
-
-    const iconImg = clone.querySelector(".current_icon");
-    if (iconImg && entryData.icon) iconImg.src = entryData.icon;
-
-    const stars = clone.querySelectorAll(
-      ".saved_star_rating input[type='radio']"
-    );
-    stars.forEach((input) => {
-      if (parseInt(input.value) === entryData.rating) input.checked = true;
-    });
-
-    setupStarRatingGroup(clone);
-
-    container.appendChild(clone);
-  });
-
-  sortEntriesByDate(container);
-  updateStatistics();
-}
 
 // add entry
-const container = document.getElementById("entries_container");
-
 document.getElementById("add_entry_button").addEventListener("click", () => {
   if (document.querySelector(".new_entry")) return; // ChatGPT
 
@@ -196,7 +103,7 @@ function selectIcon(src) {
 }
 
 // save entry
-container.addEventListener("click", (e) => {
+container.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("save_button")) return;
 
   const newEntry = e.target.closest(".new_entry");
@@ -217,19 +124,44 @@ container.addEventListener("click", (e) => {
   const checkedStar = newEntry.querySelector(".new_star_rating input[type='radio']:checked");
   const rating = checkedStar ? parseInt(checkedStar.value) : 0;
 
-  // clone
+  const entryId = newEntry.dataset.id || `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  // make object to backend
+  const entryData = {
+    _id: entryId,
+    title: newTitle,
+    artist: newArtist,
+    year: newYear,
+    date: newDate,
+    text: newText,
+    genre,
+    type,
+    format,
+    icon: newIconSrc,
+    rating,
+  };
+
+  // backend
+  try {
+    const success = await saveEntry(entryData);
+    if (!success) {
+      alert("⚠️ Could not save entry.");
+      return;
+    }
+  } catch (err) {
+    console.error("❌ Unexpected error saving entry:", err);
+    alert("⚠️ Something broke while saving. Try again.");
+    return;
+  }
+
+  // clone template and insert into DOM
   const template = document.getElementById("saved_entry_template");
   const savedEntryClone = template.content.cloneNode(true);
   const savedEntry = savedEntryClone.querySelector(".saved_entry");
+  savedEntry.dataset.id = entryId;
 
-  // give ID
-  savedEntry.dataset.id =
-    newEntry.dataset.id || `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-  // unique star rating
   setupStarRatingGroup(savedEntryClone);
 
-  // fill in content
   savedEntry.querySelector(".saved_title").value = newTitle;
   savedEntry.querySelector(".saved_artist").value = newArtist;
   savedEntry.querySelector(".saved_year").value = newYear;
@@ -258,9 +190,7 @@ container.addEventListener("click", (e) => {
 
   const entriesContainer = document.getElementById("entries_container");
   entriesContainer.appendChild(savedEntry);
-
   sortEntriesByDate(entriesContainer);
-  saveEntries().catch(console.error);
 });
 
 // sort function
@@ -379,7 +309,6 @@ container.addEventListener("click", (e) => {
   }
 });
 
-// edit entry
 container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("edit_button")) return;
 
@@ -432,7 +361,6 @@ container.addEventListener("click", (e) => {
       ?.textContent.trim();
 
     if (savedText) {
-      // ChatGPT
       const matchingRadio = [...detailsGroup.querySelectorAll("label")].find(
         (label) => label.textContent.trim() === savedText
       );
@@ -448,17 +376,14 @@ container.addEventListener("click", (e) => {
     }
   });
 
-  // replace
-  savedEntry.replaceWith(clone); // ChatGPT
+  // preserve the original ID in case we need to update the DB on re-save
+  clone.querySelector(".new_entry").dataset.id = savedEntry.dataset.id;
 
-  initDetailEntries(container); // ChatGPT
-
+  savedEntry.replaceWith(clone);
+  initDetailEntries(container);
   updateStatistics();
-
-  saveEntries().catch(console.error);
 });
 
-// delete entry
 container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
@@ -467,14 +392,14 @@ container.addEventListener("click", (e) => {
 
   const id = entry.dataset.id;
 
-  // direkt aus dem DOM schmeißen
+  // remove from DOM
   entry.remove();
   updateStatistics();
 
   if (id) {
-    deleteEntryFromDB(id).catch(console.error);
-  } else {
-    saveEntries().catch(console.error);
+    deleteEntryFromDB(id).catch((err) => {
+      console.error("Failed to delete entry from DB:", err);
+    });
   }
 });
 
