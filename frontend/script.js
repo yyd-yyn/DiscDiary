@@ -1,21 +1,20 @@
 const container = document.getElementById("entries_container");
 //API
-async function saveEntry(entryData) {
+async function saveEntry(entry) {
   try {
-    const res = await fetch('/entries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entryData),
+    const res = await fetch("/api/entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
     });
-    if (!res.ok) throw new Error('Failed to save entry');
-    const data = await res.json();
-    console.log(data.message); 
-    return true;
+
+    return res.ok;
   } catch (err) {
-    console.error('Save entry error:', err);
+    console.error("❌ Failed to reach backend:", err);
     return false;
   }
 }
+
 async function fetchEntryById(id) {
   try {
     const res = await fetch(`/entries/${id}`);
