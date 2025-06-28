@@ -17,6 +17,17 @@ module.exports = function(db) {
     }
   });
 
+   router.get('/', async (req, res) => {
+    try {
+      const entry = await db.collection('entries').find().toArray();
+      if (!entry) return res.status(404).json({ error: 'Entries not found' });
+      res.json(entry);
+    } catch (err) {
+      console.error("❌ Fetch entry error:", err);
+      res.status(500).json({ error: 'Error fetching entry' });
+    }
+  });
+
   // POST add entry
   router.post('/', async (req, res) => {
     const entry = req.body;

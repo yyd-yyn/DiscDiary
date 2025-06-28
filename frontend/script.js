@@ -29,6 +29,22 @@ async function fetchEntryById(id) {
     return null;
   }
 }
+
+async function fetchEntries() {
+  try {
+    const res = await fetch(`/api/entries/`);
+    if (res.status === 404) {
+      console.warn('Entry not found');
+      return null;
+    }
+    if (!res.ok) throw new Error('Fetch error');
+    return await res.json();
+  } catch (err) {
+    console.error('Fetch entry error:', err);
+    return null;
+  }
+}
+
 async function deleteEntryFromDB(id) {
   const response = await fetch(`/api/entries/${id}`, {
     method: "DELETE",
@@ -417,3 +433,60 @@ document.getElementById("top_button").addEventListener("click", () => {
   });
 });
 
+async function loadEntries() {
+  let data = [];
+  try {
+    const res = await fetch("/api/entries");
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      throw new Error("Server responded not OK");
+    }
+  } catch {
+    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
+  }
+
+  const template = document.getElementById("saved_entry_template");
+  const container = document.getElementById("entries_container");
+
+  container.innerHTML = "";
+
+  data.forEach((entryData) => {
+    const clone = template.content.cloneNode(true);
+
+    clone.querySelector(".saved_title").value = entryData.title;
+    clone.querySelector(".saved_artist").value = entryData.artist;
+    clone.querySelector(".saved_year").value = entryData.year;
+    clone.querySelector(".saved_date").value = entryData.date;
+    clone.querySelector(".saved_textarea").value = entryData.text;
+
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(1) summary"
+    ).textContent = entryData.genre || "Genre";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(2) summary"
+    ).textContent = entryData.type || "Type";
+    clone.querySelector(
+      ".saved_detail_entry:nth-child(3) summary"
+    ).textContent = entryData.format || "Format";
+
+    const iconImg = clone.querySelector(".current_icon");
+    if (iconImg && entryData.icon) iconImg.src = entryData.icon;
+
+    const stars = clone.querySelectorAll(
+      ".saved_star_rating input[type='radio']"
+    );
+    stars.forEach((input) => {
+      if (parseInt(input.value) === entryData.rating) input.checked = true;
+    });
+
+    setupStarRatingGroup(clone);
+
+    container.appendChild(clone);
+  });
+
+  sortEntriesByDate(container);
+  updateStatistics();
+}
+
+loadEntries();
