@@ -390,6 +390,87 @@ container.addEventListener("click", (e) => {
 
 // edit entry
 container.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("edit_button")) return;
+
+  const savedEntry = e.target.closest(".saved_entry");
+  const template = document.getElementById("new_entry_template");
+  const clone = template.content.cloneNode(true);
+  const newEntry = clone.querySelector(".new_entry");
+
+  // preserve the original ID
+  newEntry.dataset.id = savedEntry.dataset.id;
+
+  // copy input fields
+  newEntry.querySelector(".new_title").value =
+    savedEntry.querySelector(".saved_title").value;
+  newEntry.querySelector(".new_artist").value =
+    savedEntry.querySelector(".saved_artist").value;
+  newEntry.querySelector(".new_year").value =
+    savedEntry.querySelector(".saved_year").value;
+  newEntry.querySelector(".new_date").value =
+    savedEntry.querySelector(".saved_date").value;
+  newEntry.querySelector(".new_textarea").value =
+    savedEntry.querySelector(".saved_textarea").value;
+
+  // copy icon
+  const savedIcon = savedEntry.querySelector(".current_icon")?.src;
+  const newIcon = newEntry.querySelector(".new_current_icon");
+  if (savedIcon && newIcon) {
+    newIcon.src = savedIcon;
+  }
+
+  // copy star rating
+  const savedChecked = savedEntry.querySelector(
+    ".saved_star_rating input[type='radio']:checked"
+  );
+  const newStars = newEntry.querySelectorAll(
+    ".new_star_rating input[type='radio']"
+  );
+  if (savedChecked) {
+    newStars.forEach((star) => {
+      if (star.value === savedChecked.value) {
+        star.checked = true;
+      }
+    });
+  }
+
+  // copy genre/type/format detail summaries
+  const newDetails = newEntry.querySelectorAll(".new_detail_entry");
+  newDetails.forEach((detailsGroup, index) => {
+    const summary = detailsGroup.querySelector("summary");
+    const type = detailsGroup.dataset.type;
+
+    const savedDetailsGroup = savedEntry.querySelectorAll(
+      ".saved_detail_entry"
+    )[index];
+    const savedText = savedDetailsGroup
+      ?.querySelector("summary")
+      ?.textContent.trim();
+
+    if (savedText) {
+      const matchingRadio = [...detailsGroup.querySelectorAll("label")].find(
+        (label) => label.textContent.trim() === savedText
+      );
+
+      if (matchingRadio) {
+        const radio = matchingRadio.querySelector("input");
+        if (radio) {
+          radio.checked = true;
+          summary.textContent = savedText;
+          detailsGroup.removeAttribute("open");
+        }
+      }
+    }
+  });
+
+  savedEntry.replaceWith(clone);
+
+  initDetailEntries(container);
+  updateStatistics();
+});
+
+// delete entry
+container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
   const entry = e.target.closest(".new_entry");
@@ -405,26 +486,6 @@ container.addEventListener("click", (e) => {
   }
 });
 
-
-// delete entry
-container.addEventListener("click", (e) => {
-  if (!e.target.classList.contains("delete_button")) return;
-
-  const entry = e.target.closest(".new_entry");
-  if (!entry) return;
-
-  const id = entry.dataset.id;
-
-  // remove from DOM
-  entry.remove();
-  updateStatistics();
-
-  if (id) {
-    deleteEntryFromDB(id).catch((err) => {
-      console.error("Failed to delete entry from DB:", err);
-    });
-  }
-});
 
 // scroll to top
 document.getElementById("top_button").addEventListener("click", () => {
