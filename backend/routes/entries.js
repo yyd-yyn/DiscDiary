@@ -29,12 +29,13 @@ module.exports = function (db) {
     }
   });
 
-  // POST new entry
+ // POST new entry
   router.post('/', async (req, res) => {
     const entry = req.body;
+
     try {
       const result = await collection.insertOne(entry);
-      res.status(201).json({ message: 'Saved', id: result.insertedId });
+      res.status(201).json({ message: "Saved", id: result.insertedId.toString() });
     } catch (err) {
       console.error("❌ Save entry error:", err);
       res.status(500).json({ error: 'Error saving entry' });

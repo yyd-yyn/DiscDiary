@@ -7,83 +7,94 @@ async function saveEntry(entry) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entry),
     });
+
     if (res.ok) {
-      await loadEntries();
-      return true;
+      const data = await res.json();
+      return data; // expecting { id: <MongoID> }
     } else {
       console.error("❌ Server responded with error during save.");
-      return false;
+      return null;
     }
   } catch (err) {
     console.error("❌ Failed to reach backend:", err);
-    return false;
+    return null;
   }
 }
 
+// GET single entry
 async function fetchEntryById(id) {
   try {
     const res = await fetch(`/api/entries/${id}`);
     if (res.status === 404) {
-      console.warn('Entry not found');
+      console.warn("⚠️ Entry not found.");
       return null;
     }
-    if (!res.ok) throw new Error('Fetch error');
+    if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
     return await res.json();
   } catch (err) {
-    console.error('Fetch entry error:', err);
-    return [];
+    console.error("❌ Failed to fetch entry by ID:", err);
+    return null;
   }
 }
 
+// GET all entries
 async function fetchEntries() {
   try {
-    const res = await fetch(`/api/entries/`);
-    if (res.status === 404) {
-      console.warn('Entry not found');
-      return null;
-    }
-    if (!res.ok) throw new Error('Fetch error');
-    return await res.json();
+    const res = await fetch(`/api/entries`);
+    if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
+    return await res.json(); // Array of entries
   } catch (err) {
-    console.error('Fetch entry error:', err);
-    return [];
+    console.error("❌ Failed to fetch entries:", err);
+    return []; // fallback to empty array
   }
 }
 
+// DELETE
 async function deleteEntryFromDB(id) {
-  const response = await fetch(`/api/entries/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete entry from server");
+  try {
+    const res = await fetch(`/api/entries/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
+    return true;
+  } catch (err) {
+    console.error("❌ Failed to delete entry:", err);
+    alert("⚠️ Failed to delete entry on server.");
+    return false;
   }
 }
 
+// PUT / Update
 async function updateEntryInDB(id, updatedEntry) {
-  const response = await fetch(`/api/entries/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updatedEntry),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update entry on server");
+  try {
+    const res = await fetch(`/api/entries/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedEntry),
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
+    await loadEntries(); // Re-render UI after update
+    updateStatistics();
+    return true;
+  } catch (err) {
+    console.error("❌ Failed to update entry:", err);
+    alert("⚠️ Could not update entry.");
+    return false;
   }
-  await loadEntries();
-  updateStatistics();
 }
 
+// Load & render entries from DB
 async function loadEntries() {
   try {
     const res = await fetch("/api/entries");
-    if (!res.ok) throw new Error("Server responded not OK");
+    if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
 
-    const data = await res.json();
+    const data = await res.json(); // should be an array
     console.log("✅ Loaded entries from server:", data);
-
     renderEntries(data);
   } catch (err) {
     console.error("❌ Failed to load entries from server:", err);
-    alert("Failed to load entries. Check console.");
+    alert("⚠️ Failed to load entries. Check console.");
   }
 }
 
@@ -180,6 +191,7 @@ function selectIcon(src) {
   closeModal();
 }
 
+// save entry
 container.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("save_button")) return;
 
@@ -217,18 +229,18 @@ container.addEventListener("click", async (e) => {
 
   let entryId; 
 
-  try {
-    const response = await saveEntry(entryData);
-    if (!response || !response.id) {
-      alert("⚠️ Could not save entry.");
-      return;
-    }
-    entryId = response.id;
-  } catch (err) {
-    console.error("❌ Unexpected error saving entry:", err);
-    alert("⚠️ Something broke while saving. Try again.");
+ try {
+  const response = await saveEntry(entryData);
+  if (!response || !response.id) {
+    alert("⚠️ Could not save entry.");
     return;
   }
+  entryId = response.id;
+} catch (err) {
+  console.error("❌ Unexpected error saving entry:", err);
+  alert("⚠️ Something broke while saving. Try again.");
+  return;
+}
 
   // Clone
   const template = document.getElementById("saved_entry_template");
@@ -267,8 +279,8 @@ container.addEventListener("click", async (e) => {
   const entriesContainer = document.getElementById("entries_container");
   entriesContainer.appendChild(savedEntry);
   sortEntriesByDate(entriesContainer);
+  updateStatistics();
 });
-
 
 // sort function
 function sortEntriesByDate(container) {
@@ -467,11 +479,10 @@ container.addEventListener("click", (e) => {
   updateStatistics();
 });
 
-// delete entry
 container.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
-  const entry = e.target.closest(".new_entry, .saved_entry");
+  const entry = e.target.closest(".saved_entry, .new_entry"); // make sure you target saved entries
   if (!entry) return;
 
   const id = entry.dataset.id;
@@ -481,13 +492,17 @@ container.addEventListener("click", async (e) => {
   }
 
   try {
-    await deleteEntryFromDB(id);
-    updateStatistics();
+    const success = await deleteEntryFromDB(id);
+    if (success) {
+      entry.remove();  // REMOVE IT IMMEDIATELY
+      updateStatistics(); // Update stats too, since entry's gone
+    }
   } catch (err) {
     alert("Failed to delete entry on server.");
     console.error(err);
   }
 });
+
 
 // scroll to top
 document.getElementById("top_button").addEventListener("click", () => {
