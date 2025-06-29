@@ -7,8 +7,13 @@ async function saveEntry(entry) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entry),
     });
-
-    return res.ok;
+    if (res.ok) {
+      await loadEntries();
+      return true;
+    } else {
+      console.error("❌ Server responded with error during save.");
+      return false;
+    }
   } catch (err) {
     console.error("❌ Failed to reach backend:", err);
     return false;
@@ -52,6 +57,8 @@ async function deleteEntryFromDB(id) {
   if (!response.ok) {
     throw new Error("Failed to delete entry from server");
   }
+  await loadEntries();
+  updateStatistics();
 }
 
 async function updateEntryInDB(id, updatedEntry) {
@@ -63,51 +70,56 @@ async function updateEntryInDB(id, updatedEntry) {
   if (!response.ok) {
     throw new Error("Failed to update entry on server");
   }
+  await loadEntries();
+  updateStatistics();
 }
 
 async function loadEntries() {
-  let data = [];
-
   try {
     const res = await fetch("/api/entries");
     if (!res.ok) throw new Error("Server responded not OK");
-    data = await res.json();
-    console.log("✅ Loaded entries from server:", data);
-  } catch (err) {
-    console.warn("⚠️ Falling back to localStorage:", err);
-    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
-  }
 
+    const data = await res.json();
+    console.log("✅ Loaded entries from server:", data);
+
+    renderEntries(data);
+  } catch (err) {
+    console.error("❌ Failed to load entries from server:", err);
+    alert("Failed to load entries. Check console.");
+  }
+}
+
+// render
+function renderEntries(data) {
   const template = document.getElementById("saved_entry_template");
   const container = document.getElementById("entries_container");
-
-  if (!template || !container) {
-    console.error("❌ Template or container missing from DOM");
-    return;
-  }
 
   container.innerHTML = "";
 
   data.forEach((entryData) => {
     const clone = template.content.cloneNode(true);
 
-    clone.querySelector(".saved_title").value = entryData.title || "";
-    clone.querySelector(".saved_artist").value = entryData.artist || "";
-    clone.querySelector(".saved_year").value = entryData.year || "";
-    clone.querySelector(".saved_date").value = entryData.date || "";
-    clone.querySelector(".saved_textarea").value = entryData.text || "";
+    clone.querySelector(".saved_title").value = entryData.title;
+    clone.querySelector(".saved_artist").value = entryData.artist;
+    clone.querySelector(".saved_year").value = entryData.year;
+    clone.querySelector(".saved_date").value = entryData.date;
+    clone.querySelector(".saved_textarea").value = entryData.text;
 
     clone.querySelector(".saved_detail_entry:nth-child(1) summary").textContent = entryData.genre || "Genre";
     clone.querySelector(".saved_detail_entry:nth-child(2) summary").textContent = entryData.type || "Type";
     clone.querySelector(".saved_detail_entry:nth-child(3) summary").textContent = entryData.format || "Format";
 
     const iconImg = clone.querySelector(".current_icon");
-    if (iconImg) iconImg.src = entryData.icon || "http://localhost:3000/Icons/Icon_grey.png";
+    if (iconImg && entryData.icon) iconImg.src = entryData.icon;
 
     const stars = clone.querySelectorAll(".saved_star_rating input[type='radio']");
     stars.forEach((input) => {
-      input.checked = parseInt(input.value) === entryData.rating;
+      if (parseInt(input.value) === entryData.rating) input.checked = true;
     });
+    const savedEntry = clone.querySelector(".saved_entry");
+    if (savedEntry) {
+      savedEntry.dataset.id = entryData._id || entryData.id;
+    }
 
     setupStarRatingGroup(clone);
 
@@ -194,7 +206,7 @@ container.addEventListener("click", async (e) => {
 
   const entryId = newEntry.dataset.id || `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  // make object to backend
+  // backend
   const entryData = {
     _id: entryId,
     title: newTitle,
@@ -209,7 +221,6 @@ container.addEventListener("click", async (e) => {
     rating,
   };
 
-  // backend
   try {
     const success = await saveEntry(entryData);
     if (!success) {
@@ -379,90 +390,27 @@ container.addEventListener("click", (e) => {
 
 // edit entry
 container.addEventListener("click", (e) => {
-  if (!e.target.classList.contains("edit_button")) return;
+  if (!e.target.classList.contains("delete_button")) return;
 
-  const savedEntry = e.target.closest(".saved_entry");
-  const template = document.getElementById("new_entry_template");
-  const clone = template.content.cloneNode(true);
-  const newEntry = clone.querySelector(".new_entry");
+  const entry = e.target.closest(".new_entry");
+  if (!entry) return;
 
-  // preserve the original ID
-  newEntry.dataset.id = savedEntry.dataset.id;
+  const id = entry.dataset.id;
 
-  // copy input fields
-  newEntry.querySelector(".new_title").value =
-    savedEntry.querySelector(".saved_title").value;
-  newEntry.querySelector(".new_artist").value =
-    savedEntry.querySelector(".saved_artist").value;
-  newEntry.querySelector(".new_year").value =
-    savedEntry.querySelector(".saved_year").value;
-  newEntry.querySelector(".new_date").value =
-    savedEntry.querySelector(".saved_date").value;
-  newEntry.querySelector(".new_textarea").value =
-    savedEntry.querySelector(".saved_textarea").value;
-
-  // copy icon
-  const savedIcon = savedEntry.querySelector(".current_icon")?.src;
-  const newIcon = newEntry.querySelector(".new_current_icon");
-  if (savedIcon && newIcon) {
-    newIcon.src = savedIcon;
-  }
-
-  // copy star rating
-  const savedChecked = savedEntry.querySelector(
-    ".saved_star_rating input[type='radio']:checked"
-  );
-  const newStars = newEntry.querySelectorAll(
-    ".new_star_rating input[type='radio']"
-  );
-  if (savedChecked) {
-    newStars.forEach((star) => {
-      if (star.value === savedChecked.value) {
-        star.checked = true;
-      }
-    });
-  }
-
-  // copy genre/type/format detail summaries
-  const newDetails = newEntry.querySelectorAll(".new_detail_entry");
-  newDetails.forEach((detailsGroup, index) => {
-    const summary = detailsGroup.querySelector("summary");
-    const type = detailsGroup.dataset.type;
-
-    const savedDetailsGroup = savedEntry.querySelectorAll(
-      ".saved_detail_entry"
-    )[index];
-    const savedText = savedDetailsGroup
-      ?.querySelector("summary")
-      ?.textContent.trim();
-
-    if (savedText) {
-      const matchingRadio = [...detailsGroup.querySelectorAll("label")].find(
-        (label) => label.textContent.trim() === savedText
-      );
-
-      if (matchingRadio) {
-        const radio = matchingRadio.querySelector("input");
-        if (radio) {
-          radio.checked = true;
-          summary.textContent = savedText;
-          detailsGroup.removeAttribute("open");
-        }
-      }
-    }
-  });
-
-  savedEntry.replaceWith(clone);
-
-  initDetailEntries(container);
+  entry.remove();
   updateStatistics();
+
+  if (id) {
+    deleteEntryFromDB(id).catch(console.error);
+  }
 });
+
 
 // delete entry
 container.addEventListener("click", (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
-  const entry = e.target.closest(".new_entry, .saved_entry");
+  const entry = e.target.closest(".new_entry");
   if (!entry) return;
 
   const id = entry.dataset.id;
