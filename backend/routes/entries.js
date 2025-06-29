@@ -22,7 +22,7 @@ module.exports = function (db) {
   router.get('/', async (req, res) => {
     try {
       const entries = await collection.find().toArray();
-      res.json(entries); // always return empty array if no entries, not 404
+      res.json(entries);
     } catch (err) {
       console.error("❌ Fetch entries error:", err);
       res.status(500).json({ error: 'Error fetching entries' });
