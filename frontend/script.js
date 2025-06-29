@@ -26,7 +26,7 @@ async function fetchEntryById(id) {
     return await res.json();
   } catch (err) {
     console.error('Fetch entry error:', err);
-    return null;
+    return [];
   }
 }
 
@@ -41,7 +41,7 @@ async function fetchEntries() {
     return await res.json();
   } catch (err) {
     console.error('Fetch entry error:', err);
-    return null;
+    return [];
   }
 }
 
@@ -63,6 +63,59 @@ async function updateEntryInDB(id, updatedEntry) {
   if (!response.ok) {
     throw new Error("Failed to update entry on server");
   }
+}
+
+async function loadEntries() {
+  let data = [];
+
+  try {
+    const res = await fetch("/api/entries");
+    if (!res.ok) throw new Error("Server responded not OK");
+    data = await res.json();
+    console.log("✅ Loaded entries from server:", data);
+  } catch (err) {
+    console.warn("⚠️ Falling back to localStorage:", err);
+    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
+  }
+
+  const template = document.getElementById("saved_entry_template");
+  const container = document.getElementById("entries_container");
+
+  if (!template || !container) {
+    console.error("❌ Template or container missing from DOM");
+    return;
+  }
+
+  container.innerHTML = "";
+
+  data.forEach((entryData) => {
+    const clone = template.content.cloneNode(true);
+
+    clone.querySelector(".saved_title").value = entryData.title || "";
+    clone.querySelector(".saved_artist").value = entryData.artist || "";
+    clone.querySelector(".saved_year").value = entryData.year || "";
+    clone.querySelector(".saved_date").value = entryData.date || "";
+    clone.querySelector(".saved_textarea").value = entryData.text || "";
+
+    clone.querySelector(".saved_detail_entry:nth-child(1) summary").textContent = entryData.genre || "Genre";
+    clone.querySelector(".saved_detail_entry:nth-child(2) summary").textContent = entryData.type || "Type";
+    clone.querySelector(".saved_detail_entry:nth-child(3) summary").textContent = entryData.format || "Format";
+
+    const iconImg = clone.querySelector(".current_icon");
+    if (iconImg) iconImg.src = entryData.icon || "http://localhost:3000/Icons/Icon_grey.png";
+
+    const stars = clone.querySelectorAll(".saved_star_rating input[type='radio']");
+    stars.forEach((input) => {
+      input.checked = parseInt(input.value) === entryData.rating;
+    });
+
+    setupStarRatingGroup(clone);
+
+    container.appendChild(clone);
+  });
+
+  sortEntriesByDate(container);
+  updateStatistics();
 }
 
 // add entry
@@ -432,61 +485,5 @@ document.getElementById("top_button").addEventListener("click", () => {
     behavior: "smooth",
   });
 });
-
-async function loadEntries() {
-  let data = [];
-  try {
-    const res = await fetch("/api/entries");
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      throw new Error("Server responded not OK");
-    }
-  } catch {
-    data = JSON.parse(localStorage.getItem("discdiaryentries") || "[]");
-  }
-
-  const template = document.getElementById("saved_entry_template");
-  const container = document.getElementById("entries_container");
-
-  container.innerHTML = "";
-
-  data.forEach((entryData) => {
-    const clone = template.content.cloneNode(true);
-
-    clone.querySelector(".saved_title").value = entryData.title;
-    clone.querySelector(".saved_artist").value = entryData.artist;
-    clone.querySelector(".saved_year").value = entryData.year;
-    clone.querySelector(".saved_date").value = entryData.date;
-    clone.querySelector(".saved_textarea").value = entryData.text;
-
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(1) summary"
-    ).textContent = entryData.genre || "Genre";
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(2) summary"
-    ).textContent = entryData.type || "Type";
-    clone.querySelector(
-      ".saved_detail_entry:nth-child(3) summary"
-    ).textContent = entryData.format || "Format";
-
-    const iconImg = clone.querySelector(".current_icon");
-    if (iconImg && entryData.icon) iconImg.src = entryData.icon;
-
-    const stars = clone.querySelectorAll(
-      ".saved_star_rating input[type='radio']"
-    );
-    stars.forEach((input) => {
-      if (parseInt(input.value) === entryData.rating) input.checked = true;
-    });
-
-    setupStarRatingGroup(clone);
-
-    container.appendChild(clone);
-  });
-
-  sortEntriesByDate(container);
-  updateStatistics();
-}
 
 loadEntries();

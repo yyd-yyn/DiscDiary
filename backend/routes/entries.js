@@ -1,53 +1,54 @@
 const express = require('express');
 const { ObjectId } = require('mongodb');
 
-module.exports = function(db) {
+module.exports = function (db) {
   const router = express.Router();
+  const collection = db.collection('entries');
 
-  // GET fetch entry
+  // GET single entry by ID
   router.get('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-      const entry = await db.collection('entries').findOne({ _id: new ObjectId(id) });
+      const entry = await collection.findOne({ _id: new ObjectId(id) });
       if (!entry) return res.status(404).json({ error: 'Entry not found' });
       res.json(entry);
     } catch (err) {
-      console.error("❌ Fetch entry error:", err);
+      console.error("❌ Fetch entry by ID error:", err);
       res.status(500).json({ error: 'Error fetching entry' });
     }
   });
 
-   router.get('/', async (req, res) => {
+  // GET all entries
+  router.get('/', async (req, res) => {
     try {
-      const entry = await db.collection('entries').find().toArray();
-      if (!entry) return res.status(404).json({ error: 'Entries not found' });
-      res.json(entry);
+      const entries = await collection.find().toArray();
+      res.json(entries); // always return empty array if no entries, not 404
     } catch (err) {
-      console.error("❌ Fetch entry error:", err);
-      res.status(500).json({ error: 'Error fetching entry' });
+      console.error("❌ Fetch entries error:", err);
+      res.status(500).json({ error: 'Error fetching entries' });
     }
   });
 
-  // POST add entry
+  // POST new entry
   router.post('/', async (req, res) => {
     const entry = req.body;
     try {
-      await db.collection('entries').insertOne(entry);
-      res.status(201).json({ message: 'Saved' });
+      const result = await collection.insertOne(entry);
+      res.status(201).json({ message: 'Saved', id: result.insertedId });
     } catch (err) {
       console.error("❌ Save entry error:", err);
       res.status(500).json({ error: 'Error saving entry' });
     }
   });
 
-  // PUT update entry 
+  // PUT update entry
   router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updatedEntry = req.body;
     delete updatedEntry._id;
 
     try {
-      const result = await db.collection('entries').updateOne(
+      const result = await collection.updateOne(
         { _id: new ObjectId(id) },
         { $set: updatedEntry }
       );
@@ -61,11 +62,11 @@ module.exports = function(db) {
     }
   });
 
-  // DELETE remove entry
+  // DELETE entry
   router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-      const result = await db.collection('entries').deleteOne({ _id: new ObjectId(id) });
+      const result = await collection.deleteOne({ _id: new ObjectId(id) });
       if (result.deletedCount === 0) {
         return res.status(404).json({ error: 'Entry not found' });
       }
