@@ -57,8 +57,6 @@ async function deleteEntryFromDB(id) {
   if (!response.ok) {
     throw new Error("Failed to delete entry from server");
   }
-  await loadEntries();
-  updateStatistics();
 }
 
 async function updateEntryInDB(id, updatedEntry) {
@@ -182,13 +180,12 @@ function selectIcon(src) {
   closeModal();
 }
 
-// save entry
 container.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("save_button")) return;
 
   const newEntry = e.target.closest(".new_entry");
 
-  // get input
+  // Get inputs
   const newTitle = newEntry.querySelector(".new_title")?.value || "";
   const newArtist = newEntry.querySelector(".new_artist")?.value || "";
   const newYear = newEntry.querySelector(".new_year")?.value || "";
@@ -204,11 +201,8 @@ container.addEventListener("click", async (e) => {
   const checkedStar = newEntry.querySelector(".new_star_rating input[type='radio']:checked");
   const rating = checkedStar ? parseInt(checkedStar.value) : 0;
 
-  const entryId = newEntry.dataset.id || `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-  // backend
+  // Build entryData 
   const entryData = {
-    _id: entryId,
     title: newTitle,
     artist: newArtist,
     year: newYear,
@@ -221,23 +215,26 @@ container.addEventListener("click", async (e) => {
     rating,
   };
 
+  let entryId; 
+
   try {
-    const success = await saveEntry(entryData);
-    if (!success) {
+    const response = await saveEntry(entryData);
+    if (!response || !response.id) {
       alert("⚠️ Could not save entry.");
       return;
     }
+    entryId = response.id;
   } catch (err) {
     console.error("❌ Unexpected error saving entry:", err);
     alert("⚠️ Something broke while saving. Try again.");
     return;
   }
 
-  // clone template and insert into DOM
+  // Clone
   const template = document.getElementById("saved_entry_template");
   const savedEntryClone = template.content.cloneNode(true);
   const savedEntry = savedEntryClone.querySelector(".saved_entry");
-  savedEntry.dataset.id = entryId;
+  savedEntry.dataset.id = entryId; 
 
   setupStarRatingGroup(savedEntryClone);
 
@@ -271,6 +268,7 @@ container.addEventListener("click", async (e) => {
   entriesContainer.appendChild(savedEntry);
   sortEntriesByDate(entriesContainer);
 });
+
 
 // sort function
 function sortEntriesByDate(container) {
@@ -470,19 +468,24 @@ container.addEventListener("click", (e) => {
 });
 
 // delete entry
-container.addEventListener("click", (e) => {
+container.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("delete_button")) return;
 
-  const entry = e.target.closest(".new_entry");
+  const entry = e.target.closest(".new_entry, .saved_entry");
   if (!entry) return;
 
   const id = entry.dataset.id;
+  if (!id) {
+    alert("No ID found, can't delete.");
+    return;
+  }
 
-  entry.remove();
-  updateStatistics();
-
-  if (id) {
-    deleteEntryFromDB(id).catch(console.error);
+  try {
+    await deleteEntryFromDB(id);
+    updateStatistics();
+  } catch (err) {
+    alert("Failed to delete entry on server.");
+    console.error(err);
   }
 });
 
